@@ -15,7 +15,7 @@
   "devDependencies": {
     "@grafana/data": "^10.0.1",
     "@grafana/runtime": "^9.5.2",
-    "@grafana/toolkit": "^10.0.1",
+    "@grafana/toolkit": "^10.1.7",
     "@grafana/ui": "^10.0.1"
   },
   "resolutions": {
