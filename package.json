@@ -13,7 +13,7 @@
   "author": "AVEVA Group plc",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@grafana/data": "^11.5.1",
+    "@grafana/data": "^11.5.3",
     "@grafana/runtime": "^11.5.1",
     "@grafana/toolkit": "^10.1.7",
     "@grafana/ui": "^11.5.1"
