@@ -13,12 +13,12 @@ interface Props extends DataSourcePluginOptionsEditorProps<SdsDataSourceOptions,
 
 export const ConfigEditor = (props: Props) => {
   const typeLabels = {
-    [SdsDataSourceType.ADH]: 'AVEVA Data Hub',
+    [SdsDataSourceType.CDS]: 'CONNECT data services',
     [SdsDataSourceType.EDS]: 'Edge Data Store',
   };
 
   const typeOptions = [
-    { value: SdsDataSourceType.ADH, label: typeLabels[SdsDataSourceType.ADH] },
+    { value: SdsDataSourceType.CDS, label: typeLabels[SdsDataSourceType.CDS] },
     { value: SdsDataSourceType.EDS, label: typeLabels[SdsDataSourceType.EDS] },
   ];
 
@@ -51,13 +51,13 @@ export const ConfigEditor = (props: Props) => {
 
   // Fill in defaults
   if (!jsonData.type) {
-    jsonData.type = SdsDataSourceType.ADH;
+    jsonData.type = SdsDataSourceType.CDS;
   }
   if (!jsonData.edsPort) {
     jsonData.edsPort = '5590';
   }
   if (!jsonData.resource) {
-    jsonData.resource = 'https://uswe.datahub.connect.aveva.com';
+    jsonData.resource = 'https://int.platform.capdev-connect.aveva.com';
   }
   if (!jsonData.apiVersion) {
     jsonData.apiVersion = 'v1';
@@ -67,9 +67,9 @@ export const ConfigEditor = (props: Props) => {
   }
   if (
     jsonData.type === SdsDataSourceType.EDS &&
-    (!jsonData.namespaceId || edsNamespaceOptions.findIndex((x) => x.value === jsonData.namespaceId) === -1)
+    (!jsonData.sdsId || edsNamespaceOptions.findIndex((x) => x.value === jsonData.sdsId) === -1)
   ) {
-    jsonData.namespaceId = 'default';
+    jsonData.sdsId = 'default';
   }
 
   return (
@@ -79,7 +79,7 @@ export const ConfigEditor = (props: Props) => {
         <div>
           <InlineField
             label="Type"
-            tooltip="The type of SDS source system in use, either AVEVA Data Hub or Edge Data Store"
+            tooltip="The type of SDS source system in use, either CONNECT data services or Edge Data Store"
             labelWidth={20}
           >
             <Select
@@ -107,30 +107,30 @@ export const ConfigEditor = (props: Props) => {
             </InlineField>
           </div>
           <div>
-            <InlineField label="Namespace" tooltip="The Namespace in your for AVEVA Data Hub tenant" labelWidth={20}>
+            <InlineField label="EDS ID" tooltip="The ID for your EDS instance" labelWidth={20}>
               <Select
                 width={40}
-                placeholder="EDS Namespace"
+                placeholder="EDS ID"
                 options={edsNamespaceOptions}
-                onChange={onUpdateDatasourceJsonDataOptionSelect(props, 'namespaceId')}
-                value={{ value: jsonData.namespaceId, label: jsonData.namespaceId }}
+                onChange={onUpdateDatasourceJsonDataOptionSelect(props, 'sdsId')}
+                value={{ value: jsonData.sdsId, label: jsonData.sdsId }}
               />
             </InlineField>
           </div>
         </div>
       ) : (
         <div className="gf-form-group">
-          <h3 className="page-heading">AVEVA Data Hub</h3>
-          <InlineField label="URL" tooltip="The URL for AVEVA Data Hub" labelWidth={20}>
+          <h3 className="page-heading">CONNECT data services</h3>
+          <InlineField label="URL" tooltip="The URL for CONNECT" labelWidth={20}>
             <Input
               required={true}
-              placeholder="https://uswe.datahub.connect.aveva.com"
+              placeholder="https://int.platform.capdev-connect.aveva.com"
               width={40}
               onChange={onUpdateDatasourceJsonDataOption(props, 'resource')}
               value={jsonData.resource || ''}
             />
           </InlineField>
-          <InlineField label="API Version" tooltip="The version of the ADH API to use" labelWidth={20}>
+          <InlineField label="API Version" tooltip="The version of the CONNECT data services API to use" labelWidth={20}>
             <Input
               required={true}
               placeholder="v1"
@@ -139,48 +139,24 @@ export const ConfigEditor = (props: Props) => {
               value={jsonData.apiVersion || ''}
             />
           </InlineField>
-          <InlineField label="Tenant ID" tooltip="The ID of your AVEVA Data Hub tenant" labelWidth={20}>
+          <InlineField label="Account ID" tooltip="The ID for your CONNECT account" labelWidth={20}>
             <Input
               required={true}
               placeholder="00000000-0000-0000-0000-000000000000"
               width={40}
-              onChange={onUpdateDatasourceJsonDataOption(props, 'tenantId')}
-              value={jsonData.tenantId || ''}
+              onChange={onUpdateDatasourceJsonDataOption(props, 'accountId')}
+              value={jsonData.accountId || ''}
             />
           </InlineField>
-          <InlineFieldRow>
-            <InlineField
-              label="Community Data"
-              tooltip="Switch to toggle reading from a Namespace to a Community"
-              labelWidth={20}
-            >
-              <InlineSwitch
-                onChange={onUpdateDatasourceJsonDataOptionChecked(props, 'useCommunity')}
-                value={jsonData.useCommunity}
-              />
-            </InlineField>
-          </InlineFieldRow>
-          {jsonData.useCommunity && (
-            <InlineField label="Community ID" tooltip="The ID of the AVEVA Data Hub Community" labelWidth={20}>
-              <Input
-                placeholder="00000000-0000-0000-0000-000000000000"
-                width={40}
-                onChange={onUpdateDatasourceJsonDataOption(props, 'communityId')}
-                value={jsonData.communityId || ''}
-              />
-            </InlineField>
-          )}
-          {!jsonData.useCommunity && (
-            <InlineField label="Namespace ID" tooltip="The Namespace in your for AVEVA Data Hub tenant" labelWidth={20}>
-              <Input
-                required={true}
-                placeholder="00000000-0000-0000-0000-000000000000"
-                width={40}
-                onChange={onUpdateDatasourceJsonDataOption(props, 'namespaceId')}
-                value={jsonData.namespaceId || ''}
-              />
-            </InlineField>
-          )}
+          <InlineField label="SDS ID" tooltip="The Id for your SDS instance" labelWidth={20}>
+            <Input
+              required={true}
+              placeholder="mySdsId"
+              width={40}
+              onChange={onUpdateDatasourceJsonDataOption(props, 'sdsId')}
+              value={jsonData.sdsId || ''}
+            />
+          </InlineField>
           <InlineFieldRow>
             <InlineField label="Use OAuth token" tooltip="Switch to toggle authentication modes" labelWidth={20}>
               <InlineSwitch
@@ -190,7 +166,7 @@ export const ConfigEditor = (props: Props) => {
             </InlineField>
             {jsonData.oauthPassThru && (
               <div style={warningStyle}>
-                Warning: Requires configuring genenric OAuth with AVEVA Data Hub in your Grafana Server
+                Warning: Requires configuring genenric OAuth with CONNECT data services in your Grafana Server
               </div>
             )}
           </InlineFieldRow>

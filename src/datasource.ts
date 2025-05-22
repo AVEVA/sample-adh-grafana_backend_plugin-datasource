@@ -10,7 +10,7 @@ export class DataSource extends DataSourceWithBackend<SdsQuery, SdsDataSourceOpt
   edsPort: string;
   constructor(instanceSettings: DataSourceInstanceSettings<SdsDataSourceOptions>) {
     super(instanceSettings);
-    this.type = instanceSettings.jsonData?.type || SdsDataSourceType.ADH;
+    this.type = instanceSettings.jsonData?.type || SdsDataSourceType.CDS;
     this.edsPort = instanceSettings.jsonData?.edsPort || '5590';
   }
 
@@ -82,7 +82,7 @@ export class DataSource extends DataSourceWithBackend<SdsQuery, SdsDataSourceOpt
   }
 
 query(request: DataQueryRequest<SdsQuery>): Observable<DataQueryResponse> {
-    if (this.type === SdsDataSourceType.ADH) {
+    if (this.type === SdsDataSourceType.CDS) {
       return super.query(request);
     } else {
       return this.queryEDS(request);

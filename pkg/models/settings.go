@@ -10,10 +10,8 @@ import (
 type CdsSettings struct {
 	Resource      string             `json:"resource"`
 	ApiVersion    string             `json:"apiVersion"`
-	TenantId      string             `json:"tenantId"`
-	NamespaceId   string             `json:"namespaceId"`
-	UseCommunity  bool               `json:"useCommunity"`
-	CommunityId   string             `json:"communityId"`
+	AccountId     string             `json:"accountId"`
+	SdsId         string             `json:"sdsId"`
 	ClientId      string             `json:"clientId"`
 	OauthPassThru bool               `json:"oauthPassThru"`
 	Secrets       *SecretCdsSettings `json:"-"`

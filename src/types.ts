@@ -2,7 +2,7 @@ import { DataSourceJsonData } from '@grafana/data';
 import { DataQuery } from '@grafana/schema';
 
 export enum SdsDataSourceType {
-  ADH = 'ADH',
+  CDS = 'ADH',
   EDS = 'EDS',
 }
 
@@ -25,12 +25,10 @@ export interface SdsDataSourceOptions extends DataSourceJsonData {
   edsPort: string;
   resource: string;
   apiVersion: string;
-  tenantId: string;
+  accountId: string;
   clientId: string;
-  useCommunity: boolean;
-  communityId: string;
   oauthPassThru: boolean;
-  namespaceId: string;
+  sdsId: string;
 }
 
 export interface SdsDataSourceSecureOptions {

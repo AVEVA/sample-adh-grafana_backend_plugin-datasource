@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aveva/connect-data-services/pkg/cds/community"
 	"github.com/aveva/connect-data-services/pkg/cds/sds"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
@@ -18,7 +17,7 @@ import (
 type CdsClient struct {
 	resource        string
 	apiVersion      string
-	tenantId        string
+	accountId       string
 	clientId        string
 	clientSecret    string
 	token           string
@@ -26,62 +25,73 @@ type CdsClient struct {
 	client          *http.Client
 }
 
-func NewCdsClient(resource string, apiVersion string, tenantId string, clientId string, clientSecret string) CdsClient {
+func NewCdsClient(resource string, apiVersion string, accountId string, clientId string, clientSecret string) CdsClient {
 	return CdsClient{
 		resource:     resource,
 		apiVersion:   apiVersion,
-		tenantId:     tenantId,
+		accountId:    accountId,
 		clientId:     clientId,
 		clientSecret: clientSecret,
 		client:       &http.Client{},
 	}
 }
 
-func GetClientToken(d *CdsClient) (string, error) {
-	if (d.tokenExpiration - time.Now().Unix()) > (5 * 60) {
-		return ("Bearer " + d.token), nil
+func GetClientToken(cdsClient *CdsClient) (string, error) {
+	if (cdsClient.tokenExpiration - time.Now().Unix()) > (5 * 60) {
+		return ("Bearer " + cdsClient.token), nil
 	}
+	//
+	// TODO wellKnownEndpoint is not ready yet.  Manually construct token endpoint
+	//
+	/*
+		wellKnownEndpoint := d.resource + "/identity/.well-known/openid-configuration"
+		req, err := http.NewRequest("GET", wellKnownEndpoint, nil)
+		if err != nil {
+			log.DefaultLogger.Warn("Error forming request", err.Error())
+			return "", err
+		}
 
-	wellKnownEndpoint := d.resource + "/identity/.well-known/openid-configuration"
-	req, err := http.NewRequest("GET", wellKnownEndpoint, nil)
-	if err != nil {
-		log.DefaultLogger.Warn("Error forming request", err.Error())
-		return "", err
-	}
+		resp, err := d.client.Do(req)
+		if err != nil {
+			log.DefaultLogger.Warn("Error requesting well known endpoints", err.Error())
+			return "", err
+		}
+		defer resp.Body.Close()
 
-	resp, err := d.client.Do(req)
-	if err != nil {
-		log.DefaultLogger.Warn("Error requesting well known endpoints", err.Error())
-		return "", err
-	}
-	defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.DefaultLogger.Warn("Error reading response", err.Error())
+			return "", err
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			err = fmt.Errorf("Status: " + resp.Status + "\nBody: " + string(body))
+			log.DefaultLogger.Warn("Error making request", err)
+			return "", err
+		}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.DefaultLogger.Warn("Error reading response", err.Error())
-		return "", err
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		err = fmt.Errorf("Status: " + resp.Status + "\nBody: " + string(body))
-		log.DefaultLogger.Warn("Error making request", err)
-		return "", err
-	}
+		var openIdConfig map[string]interface{}
 
-	var openIdConfig map[string]interface{}
+		err = json.Unmarshal(body, &openIdConfig)
+		if err != nil {
+			log.DefaultLogger.Warn("Error parsing json", err.Error())
+			return "", err
+		}
 
-	err = json.Unmarshal(body, &openIdConfig)
-	if err != nil {
-		log.DefaultLogger.Warn("Error parsing json", err.Error())
-		return "", err
-	}
-
-	tokenEndpoint := openIdConfig["token_endpoint"].(string)
-
-	resp, err = d.client.PostForm(tokenEndpoint,
+		tokenEndpoint := openIdConfig["token_endpoint"].(string)
+	*/
+	resource := strings.TrimPrefix(cdsClient.resource, "https://")
+	resource = strings.TrimSuffix(resource, "/")
+	tokenEndpoint := "https://identity." + resource + "/account/" + cdsClient.accountId + "/authentication/connect/token"
+	log.DefaultLogger.Warn("Requesting token from", tokenEndpoint)
+	log.DefaultLogger.Warn("clientId", cdsClient.clientId)
+	log.DefaultLogger.Warn("clientSecret", cdsClient.clientSecret)
+	resp, err := cdsClient.client.PostForm(tokenEndpoint,
 		url.Values{
-			"client_id":     {d.clientId},
-			"client_secret": {d.clientSecret},
-			"grant_type":    {"client_credentials"}})
+			"client_id":     {cdsClient.clientId},
+			"client_secret": {cdsClient.clientSecret},
+			"grant_type":    {"client_credentials"},
+			"scope":         {"api"},
+		})
 
 	if err != nil {
 		log.DefaultLogger.Warn("Error requesting token", err.Error())
@@ -90,7 +100,7 @@ func GetClientToken(d *CdsClient) (string, error) {
 
 	defer resp.Body.Close()
 
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.DefaultLogger.Warn("Error requesting token", err.Error())
 		return "", err
@@ -109,10 +119,10 @@ func GetClientToken(d *CdsClient) (string, error) {
 		return "", err
 	}
 
-	d.token = tokenInformation["access_token"].(string)
-	d.tokenExpiration = int64(tokenInformation["expires_in"].(float64)) + time.Now().Unix()
+	cdsClient.token = tokenInformation["access_token"].(string)
+	cdsClient.tokenExpiration = int64(tokenInformation["expires_in"].(float64)) + time.Now().Unix()
 
-	return ("Bearer " + d.token), nil
+	return ("Bearer " + cdsClient.token), nil
 }
 
 func SdsRequest(d *CdsClient, token string, path string, headers map[string]string) ([]byte, error) {
@@ -153,8 +163,8 @@ func SdsRequest(d *CdsClient, token string, path string, headers map[string]stri
 	return body, nil
 }
 
-func StreamsQuery(d *CdsClient, namespaceId string, token string, query string) (*data.Frame, error) {
-	basePath := d.resource + "/api/" + d.apiVersion + "/tenants/" + url.QueryEscape(d.tenantId) + "/namespaces/" + url.QueryEscape(namespaceId)
+func StreamsQuery(d *CdsClient, sdsId string, token string, query string) (*data.Frame, error) {
+	basePath := d.resource + "/api/account/" + url.QueryEscape(d.accountId) + "/sds/" + url.QueryEscape(sdsId) + "/" + d.apiVersion
 	path := (basePath + "/streams?query=" + url.QueryEscape(query))
 
 	body, err := SdsRequest(d, token, path, nil)
@@ -191,49 +201,8 @@ func StreamsQuery(d *CdsClient, namespaceId string, token string, query string) 
 	return frame, nil
 }
 
-func CommunityStreamsQuery(d *CdsClient, communityId string, token string, query string) (*data.Frame, error) {
-	basePath := d.resource + "/api/" + d.apiVersion + "/search/communities/" + url.QueryEscape(communityId)
-
-	path := (basePath + "/streams?query=" + url.QueryEscape(query))
-
-	body, err := SdsRequest(d, token, path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var streams []community.StreamSearchResult
-
-	err = json.Unmarshal(body, &streams)
-	if err != nil {
-		log.DefaultLogger.Warn("Error parsing json", err.Error())
-		log.DefaultLogger.Warn(fmt.Sprint(string(body)))
-		return nil, err
-	}
-
-	// create a dataframe
-	frame := data.NewFrame("response")
-
-	// create property lists from streams list
-	ids := make([]string, len(streams))
-	names := make([]string, len(streams))
-	for i := 0; i < len(streams); i++ {
-		// replace api version for compatibility with preview route
-		// this can be removed once community features are released
-		ids[i] = strings.Replace(streams[i].Self, "/v1/", "/"+d.apiVersion+"/", 1)
-		names[i] = streams[i].Name
-	}
-
-	// add fields
-	frame.Fields = append(frame.Fields,
-		data.NewField("Id", nil, ids),
-		data.NewField("Name", nil, names),
-	)
-
-	return frame, nil
-}
-
-func StreamsDataQuery(d *CdsClient, namespaceId string, token string, id string, startIndex string, endIndex string) (*data.Frame, error) {
-	basePath := d.resource + "/api/" + d.apiVersion + "/tenants/" + url.QueryEscape(d.tenantId) + "/namespaces/" + url.QueryEscape(namespaceId)
+func StreamsDataQuery(d *CdsClient, sdsId string, token string, id string, startIndex string, endIndex string) (*data.Frame, error) {
+	basePath := d.resource + "/api/account/" + url.QueryEscape(d.accountId) + "/sds/" + url.QueryEscape(sdsId) + "/" + d.apiVersion
 
 	// get type Id
 	path := (basePath + "/streams/" + url.QueryEscape(id))
@@ -283,61 +252,6 @@ func StreamsDataQuery(d *CdsClient, namespaceId string, token string, id string,
 	}
 
 	return createDataFrameFromSdsData(stream.Name, sdsType, sdsData)
-}
-
-func CommunityStreamsDataQuery(d *CdsClient, communityId string, token string, self string, startIndex string, endIndex string) (*data.Frame, error) {
-
-	// make a community header
-	communityHeader := map[string]string{
-		"Community-Id": url.QueryEscape(communityId),
-	}
-
-	// get stream
-	path := self
-	body, err := SdsRequest(d, token, path, communityHeader)
-	if err != nil {
-		return nil, err
-	}
-
-	var stream sds.SdsStream
-	err = json.Unmarshal(body, &stream)
-	if err != nil {
-		log.DefaultLogger.Warn("Error parsing json", err.Error())
-		log.DefaultLogger.Warn(fmt.Sprint(string(body)))
-		return nil, err
-	}
-
-	// get resolved type info
-	path = (self + "/resolved")
-	body, err = SdsRequest(d, token, path, communityHeader)
-	if err != nil {
-		return nil, err
-	}
-
-	var sdsResolvedStream sds.SdsResolvedStream
-	err = json.Unmarshal(body, &sdsResolvedStream)
-	if err != nil {
-		log.DefaultLogger.Warn("Error parsing json", err.Error())
-		log.DefaultLogger.Warn(fmt.Sprint(string(body)))
-		return nil, err
-	}
-
-	// get data
-	path = (self + "/Data?startIndex=" + url.QueryEscape(startIndex) + "&endIndex=" + url.QueryEscape(endIndex))
-	body, err = SdsRequest(d, token, path, communityHeader)
-	if err != nil {
-		return nil, err
-	}
-
-	var sdsData []map[string]interface{}
-	err = json.Unmarshal(body, &sdsData)
-	if err != nil {
-		log.DefaultLogger.Warn("Error parsing json", err.Error())
-		log.DefaultLogger.Warn(fmt.Sprint(string(body)))
-		return nil, err
-	}
-
-	return createDataFrameFromSdsData(stream.Name, sdsResolvedStream.SdsType, sdsData)
 }
 
 func createDataFrameFromSdsData(dataFrameName string, sdsType sds.SdsType, sdsData []map[string]interface{}) (*data.Frame, error) {

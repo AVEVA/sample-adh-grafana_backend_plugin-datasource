@@ -33,10 +33,8 @@ type CdsDataSource struct {
 type CdsDataSourceOptions struct {
 	Resource      string `json:"resource"`
 	ApiVersion    string `json:"apiVersion"`
-	TenantId      string `json:"tenantId"`
-	NamespaceId   string `json:"namespaceId"`
-	UseCommunity  bool   `json:"useCommunity"`
-	CommunityId   string `json:"communityId"`
+	AccountId     string `json:"accountId"`
+	SdsId         string `json:"sdsId"`
 	ClientId      string `json:"clientId"`
 	OauthPassThru bool   `json:"oauthPassThru"`
 }
@@ -47,10 +45,6 @@ type QueryModel struct {
 	Id         string `json:"id"`
 }
 
-type CheckHealthResponseBody struct {
-	Id string `json:"Id"`
-}
-
 // Creates a new datasource instance.
 func NewCdsDataSource(dis backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	log.DefaultLogger.Error("NEW DATA SOURCE CALLED")
@@ -59,7 +53,7 @@ func NewCdsDataSource(dis backend.DataSourceInstanceSettings) (instancemgmt.Inst
 		return nil, err
 	}
 
-	client := NewCdsClient(settings.Resource, settings.ApiVersion, settings.TenantId, settings.ClientId, settings.Secrets.ClientSecret)
+	client := NewCdsClient(settings.Resource, settings.ApiVersion, settings.AccountId, settings.ClientId, settings.Secrets.ClientSecret)
 	return &CdsDataSource{
 		cdsClient: &client,
 		settings:  settings,
@@ -128,32 +122,18 @@ func (d *CdsDataSource) query(_ context.Context, pCtx backend.PluginContext, que
 	// determine what type of query to use
 	frame := data.NewFrame("response")
 	var err error
-	if d.settings.UseCommunity {
-		if strings.EqualFold(qm.Collection, "streams") && qm.Id != "" {
-			log.DefaultLogger.Debug("Community stream data query")
-			frame, err = CommunityStreamsDataQuery(d.cdsClient,
-				d.settings.CommunityId,
-				token,
-				qm.Id,
-				query.TimeRange.From.Format(time.RFC3339),
-				query.TimeRange.To.Format(time.RFC3339))
-		} else if strings.EqualFold(qm.Collection, "streams") {
-			log.DefaultLogger.Debug("Community stream query")
-			frame, err = CommunityStreamsQuery(d.cdsClient, d.settings.CommunityId, token, qm.Query)
-		}
-	} else {
-		if strings.EqualFold(qm.Collection, "streams") && qm.Id != "" {
-			log.DefaultLogger.Debug("Stream data query")
-			frame, err = StreamsDataQuery(d.cdsClient,
-				d.settings.NamespaceId,
-				token,
-				qm.Id,
-				query.TimeRange.From.Format(time.RFC3339),
-				query.TimeRange.To.Format(time.RFC3339))
-		} else if strings.EqualFold(qm.Collection, "streams") {
-			log.DefaultLogger.Debug("Stream query")
-			frame, err = StreamsQuery(d.cdsClient, d.settings.NamespaceId, token, qm.Query)
-		}
+
+	if strings.EqualFold(qm.Collection, "streams") && qm.Id != "" {
+		log.DefaultLogger.Debug("Stream data query")
+		frame, err = StreamsDataQuery(d.cdsClient,
+			d.settings.SdsId,
+			token,
+			qm.Id,
+			query.TimeRange.From.Format(time.RFC3339),
+			query.TimeRange.To.Format(time.RFC3339))
+	} else if strings.EqualFold(qm.Collection, "streams") {
+		log.DefaultLogger.Debug("Stream query")
+		frame, err = StreamsQuery(d.cdsClient, d.settings.SdsId, token, qm.Query)
 	}
 
 	// add the frames to the response.
@@ -190,25 +170,12 @@ func (d *CdsDataSource) CheckHealth(_ context.Context, req *backend.CheckHealthR
 	}
 
 	// Make a request to test the token
-	var path string
-	if d.settings.UseCommunity {
-		path = d.cdsClient.resource + "/api/" + d.cdsClient.apiVersion + "/tenants/" + d.cdsClient.tenantId + "/communities/" + d.settings.CommunityId
-	} else {
-		path = d.cdsClient.resource + "/api/" + d.cdsClient.apiVersion + "/tenants/" + d.cdsClient.tenantId + "/namespaces/" + d.settings.NamespaceId
-	}
+	var path = d.cdsClient.resource + "/api/account/" + d.cdsClient.accountId + "/sds/" + d.settings.SdsId + "/" + d.cdsClient.apiVersion + "/streams"
 
-	body, err := SdsRequest(d.cdsClient, token, path, nil)
+	// Assuming this request has 2xx status means token was successful
+	_, err := SdsRequest(d.cdsClient, token, path, nil)
 	if err != nil {
 		log.DefaultLogger.Warn("Error test request health check", err.Error())
-		status = backend.HealthStatusError
-		message = "Invalid Configuration"
-	}
-
-	var responseJson CheckHealthResponseBody
-
-	err = json.Unmarshal(body, &responseJson)
-	if err != nil {
-		log.DefaultLogger.Warn("Error parsing resonse health check", err.Error())
 		status = backend.HealthStatusError
 		message = "Invalid Configuration"
 	}
