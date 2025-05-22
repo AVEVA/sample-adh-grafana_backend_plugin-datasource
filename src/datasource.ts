@@ -1,26 +1,15 @@
-import {
-  DataQueryRequest,
-  DataSourceInstanceSettings,
-  SelectableValue,
-  DataFrame,
-  DataQueryResponse,
-  MutableDataFrame,
-  FieldType,
-} from '@grafana/data';
-import { BackendSrv, DataSourceWithBackend, FetchResponse } from '@grafana/runtime';
+import { DataSourceInstanceSettings, DataQueryRequest, DataQueryResponse, FieldType, MutableDataFrame, DataFrame, SelectableValue } from '@grafana/data';
+import { DataSourceWithBackend, FetchResponse, getBackendSrv } from '@grafana/runtime';
+
 import { defaultQuery, SdsDataSourceOptions, SdsDataSourceType, SdsQuery } from './types';
-import { lastValueFrom, Observable, map, zip } from 'rxjs';
+import { Observable, zip, map, lastValueFrom } from 'rxjs';
 import { Dispatch, SetStateAction } from 'react';
 
 export class DataSource extends DataSourceWithBackend<SdsQuery, SdsDataSourceOptions> {
   type: SdsDataSourceType;
   edsPort: string;
-
-  /** @ngInject */
-  constructor(instanceSettings: DataSourceInstanceSettings<SdsDataSourceOptions>, private backendSrv: BackendSrv) {
+  constructor(instanceSettings: DataSourceInstanceSettings<SdsDataSourceOptions>) {
     super(instanceSettings);
-
-    this.backendSrv = backendSrv;
     this.type = instanceSettings.jsonData?.type || SdsDataSourceType.ADH;
     this.edsPort = instanceSettings.jsonData?.edsPort || '5590';
   }
@@ -31,12 +20,12 @@ export class DataSource extends DataSourceWithBackend<SdsQuery, SdsDataSourceOpt
 
     const requests = request.targets.map((target) => {
       if (target.id === '') {
-        return this.backendSrv.fetch({
+        return getBackendSrv().fetch({
           url: `http://localhost:${this.edsPort}/api/v1/tenants/default/namespaces/default/streams?query=${target.queryText}`,
           method: 'GET',
         });
       } else {
-        return this.backendSrv.fetch({
+        return getBackendSrv().fetch({
           url: `http://localhost:${this.edsPort}/api/v1/tenants/default/namespaces/default/streams/${target.id}/data?startIndex=${from}&endIndex=${to}`,
           method: 'GET',
         });
@@ -92,7 +81,7 @@ export class DataSource extends DataSourceWithBackend<SdsQuery, SdsDataSourceOpt
     );
   }
 
-  query(request: DataQueryRequest<SdsQuery>): Observable<DataQueryResponse> {
+query(request: DataQueryRequest<SdsQuery>): Observable<DataQueryResponse> {
     if (this.type === SdsDataSourceType.ADH) {
       return super.query(request);
     } else {

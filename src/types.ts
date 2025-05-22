@@ -1,4 +1,5 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataSourceJsonData } from '@grafana/data';
+import { DataQuery } from '@grafana/schema';
 
 export enum SdsDataSourceType {
   ADH = 'ADH',
@@ -35,3 +36,4 @@ export interface SdsDataSourceOptions extends DataSourceJsonData {
 export interface SdsDataSourceSecureOptions {
   clientSecret: string;
 }
+

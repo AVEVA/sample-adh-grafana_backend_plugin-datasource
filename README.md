@@ -1,98 +1,136 @@
-# Sequential Data Store Data Source Backend Plugin Sample
+# Grafana data source plugin template
 
-**Version:** 1.0.2
+This template is a starting point for building a Data Source Plugin for Grafana.
 
-[![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/ADH/osisoft.sample-adh-grafana_backend_plugin-datasource?repoName=osisoft%2Fsample-adh-grafana_backend_plugin-datasource&branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=4858&repoName=osisoft%2Fsample-adh-grafana_backend_plugin-datasource&branchName=main)
+## What are Grafana data source plugins?
 
-This sample demonstrates how to build a [Grafana](https://grafana.com/) data source backend plugin that runs queries against the Sequential Data Store of AVEVA Data Hub (ADH) or Edge Data Store. The sample performs normal "Get Values" calls against a specified stream in SDS, using the time range of the Grafana dashboard. For more information about backend plugins, refer to the documentation on [Backend plugins](https://grafana.com/docs/grafana/latest/developers/plugins/backend/).
-
-## Requirements
-
-- [Grafana 8.3+](https://grafana.com/grafana/download)
-- Web Browser with JavaScript enabled
-- [NodeJS](https://nodejs.org/en/)
-- [Go](https://go.dev/)
-- [Mage](https://magefile.org/)
-- [Git](https://git-scm.com/download/win)
-- If using AVEVA Data Hub and not using OAuth passthrough, register a Client Credentials Client in AVEVA Data Hub; a client secret will need to be provided to the sample plugin configuration
-- If using Edge Data Store, the browser must be running local to a running copy of Edge Data Store
+Grafana supports a wide range of data sources, including Prometheus, MySQL, and even Datadog. There’s a good chance you can already visualize metrics from the systems you have set up. In some cases, though, you already have an in-house metrics solution that you’d like to add to your Grafana dashboards. Grafana Data Source Plugins enables integrating such solutions with Grafana.
 
 ## Getting started
 
-1. Copy this folder to your Grafana server's plugins directory, like `.../grafana/data/plugins`
-1. (Optional) If using other plugins, rename the folder to `aveva-data-hub-sample`
-1. Open a command prompt inside that folder
-1. Install dependencies, using `npm ci`
-1. Build the plugin, using `npm run build` (or `npm run dev` for browser debugging)
-1. Update Grafana plugin SDK for Go dependency to the latest minor version, using `go get -u github.com/grafana/grafana-plugin-sdk-go` and `go mod tidy`
-1. Build backend plugin binaries for Linux, Windows, and Darwin, using `mage -v`
-1. Restart the Grafana server to load the new plugin
-1. Open the Grafana configuration and set the parameter `allow_loading_unsigned_plugins` equal to `aveva-sds-datasource` or to the name of the folder set in step 2 (see [Grafana docs](https://grafana.com/docs/grafana/latest/administration/configuration/#allow_loading_unsigned_plugins))
-1. Add a new Grafana datasource using the sample (see [Grafana docs](https://grafana.com/docs/grafana/latest/features/datasources/add-a-data-source/))
-1. Choose whether to query against AVEVA Data Hub or Edge Data Store
-1. Enter the relevant required information; if using ADH, the client secret will be encrypted in the Grafana server and HTTP requests to ADH will be made by a server-side proxy, as described in the [Grafana docs](https://grafana.com/docs/grafana/latest/developers/plugins/authentication/)
-1. Open a new or existing Grafana dashboard, and choose the Sequential Data Store Sample as the data source
-1. Enter your Namespace (if querying ADH) and Stream, and data will populate into the dashboard from the stream for the dashboard's time range
+### Backend
 
-## Running the Sample with Docker
+1. Update [Grafana plugin SDK for Go](https://grafana.com/developers/plugin-tools/key-concepts/backend-plugins/grafana-plugin-sdk-for-go) dependency to the latest minor version:
 
-1. Open a command prompt inside this folder
-1. Build the container using `docker build -t grafana-adh .`  
-   _Note: The dockerfile being built contains an ENV statement that creates an [environment variable](https://grafana.com/docs/grafana/latest/administration/configuration/#configure-with-environment-variables) that overrides an option in the grafana config. In this case, the `allow_loading_unsigned_plugins` option is being overridden to allow the [unsigned plugin](https://grafana.com/docs/grafana/latest/administration/configuration/#allow_loading_unsigned_plugins) in this sample to be used._
-1. Run the container using `docker run -d --name=grafana -p 3000:3000 grafana-adh`
-1. Navigate to localhost:3000 to configure data sources and view data
+   ```bash
+   go get -u github.com/grafana/grafana-plugin-sdk-go
+   go mod tidy
+   ```
 
-## Using ADH OAuth login to Grafana
+2. Build backend plugin binaries for Linux, Windows and Darwin:
 
-To use AVEVA Data Hub as an Identity provider through OAuth, add the following generic OAuth configuration to your grafana server's custom.ini. Please note, you may need to create a new custom.ini if one does not already exist and an Authorization Code Client with the appropriate redirect URLs will need to be generated. For more information please refer to Grafana's [configuration documentation](https://grafana.com/docs/grafana/latest/setup-grafana/configure-grafana/) or their [Generic OAuth documentation](https://grafana.com/docs/grafana/latest/auth/generic-oauth/).
+   ```bash
+   mage -v
+   ```
 
-```ini
-[auth.generic_oauth]
-enabled = true
-name = AVEVA Data Hub
-allow_sign_up = true
-client_id = <PLACEHOLDER_CLIENT_ID>
-scopes = openid profile email ocsapi offline_access
-auth_url = https://uswe.datahub.connect.aveva.com/identity/connect/authorize
-token_url = https://uswe.datahub.connect.aveva.com/identity/connect/token
-api_url = https://uswe.datahub.connect.aveva.com/identity/connect/userinfo
-role_attribute_path = contains(role_type[*], '2dc742ab-39ea-4fc0-a39e-2bcb71c26a5f') && 'Admin' || contains(role_type[*], 'f1439595-e5a2-487f-8a4f-0627fefe75df') && 'Editor' || 'Viewer'
-use_pkce = true
-```
+3. List all available Mage targets for additional commands:
 
-| Setting             | Description                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| enabled             | Whether generic OAuth is enabled.                                                                                                                                                                                                                                                                                                                              |
-| name                | The name of the Identity Provider. This is also what is shown on the button when prompted for login.                                                                                                                                                                                                                                                           |
-| allow_sign_up       | This setting allows Grafana users to be automatically created upon login. With this set to false, an administrator would have to create an account within Grafana for a user before said user could access Grafana.                                                                                                                                            |
-| client_id           | The Authorization Code Client Id. By default, refresh tokens are not issued and the token lifetime is 1 hour. To enable refresh tokens and allow the token to be refreshed for up to 8 hours, AllowOfflineAccess must be set to true on the client's configuration, which can be set within the API console.                                                   |
-| scopes              | The OAuth scopes to be designate what access the application should have to the user’s account. OpenId, Profile, and Email are used to gather information about the user and determine what their role should be if role_attribute_path is specified. Ocsapi gives the user access to the AVEVA Data Hub API. Offline_access is used to enable refresh tokens. |
-| auth_url            | The well-known authorization URL of AVEVA Data Hub (may depend on region).                                                                                                                                                                                                                                                                                     |
-| token_url           | The well-known token URL of AVEVA Data Hub (may depend on region).                                                                                                                                                                                                                                                                                             |
-| api_url             | The well-known user information URL of AVEVA Data Hub (may depend on region).                                                                                                                                                                                                                                                                                  |
-| role_attribute_path | Defines how roles are mapped between AVEVA Data Hub and Grafana.                                                                                                                                                                                                                                                                                               |
-| use_pkce            | Enables and forces Grafana to use PKCE.                                                                                                                                                                                                                                                                                                                        |
+   ```bash
+   mage -l
+   ```
 
-## Using Community Data
+### Frontend
 
-1. Add a new Grafana datasource using the sample (see [Grafana docs](https://grafana.com/docs/grafana/latest/features/datasources/add-a-data-source/))
-1. Choose AVEVA Data Hub
-1. Toggle the "Community Data" switch to 'true'
-1. Enter the relevant required information. You can find the Community ID in the URL of the Community Details page.
+1. Install dependencies
 
-## Running the Automated Tests on Frontend Components
+   ```bash
+   npm install
+   ```
 
-1. Open a command prompt inside this folder
-1. Install dependencies, using `npm ci`
-1. Run the tests, using `npm test`
+2. Build plugin in development mode and run in watch mode
 
-## Running the Automated Tests on Backend Components
+   ```bash
+   npm run dev
+   ```
 
-1. Open a command prompt inside this folder
-1. Install dependencies, using `go mod tidy`
-1. Run the tests, using `go test`
+3. Build plugin in production mode
 
----
+   ```bash
+   npm run build
+   ```
 
-For the main ADH page [ReadMe](https://github.com/osisoft/OSI-Samples-OCS)  
-For the main samples page [ReadMe](https://github.com/osisoft/OSI-Samples)
+4. Run the tests (using Jest)
+
+   ```bash
+   # Runs the tests and watches for changes, requires git init first
+   npm run test
+
+   # Exits after running all the tests
+   npm run test:ci
+   ```
+
+5. Spin up a Grafana instance and run the plugin inside it (using Docker)
+
+   ```bash
+   npm run server
+   ```
+
+6. Run the E2E tests (using Playwright)
+
+   ```bash
+   # Spins up a Grafana instance first that we tests against
+   npm run server
+
+   # If you wish to start a certain Grafana version. If not specified will use latest by default
+   GRAFANA_VERSION=11.3.0 npm run server
+
+   # Starts the tests
+   npm run e2e
+   ```
+
+7. Run the linter
+
+   ```bash
+   npm run lint
+
+   # or
+
+   npm run lint:fix
+   ```
+
+# Distributing your plugin
+
+When distributing a Grafana plugin either within the community or privately the plugin must be signed so the Grafana application can verify its authenticity. This can be done with the `@grafana/sign-plugin` package.
+
+_Note: It's not necessary to sign a plugin during development. The docker development environment that is scaffolded with `@grafana/create-plugin` caters for running the plugin without a signature._
+
+## Initial steps
+
+Before signing a plugin please read the Grafana [plugin publishing and signing criteria](https://grafana.com/legal/plugins/#plugin-publishing-and-signing-criteria) documentation carefully.
+
+`@grafana/create-plugin` has added the necessary commands and workflows to make signing and distributing a plugin via the grafana plugins catalog as straightforward as possible.
+
+Before signing a plugin for the first time please consult the Grafana [plugin signature levels](https://grafana.com/legal/plugins/#what-are-the-different-classifications-of-plugins) documentation to understand the differences between the types of signature level.
+
+1. Create a [Grafana Cloud account](https://grafana.com/signup).
+2. Make sure that the first part of the plugin ID matches the slug of your Grafana Cloud account.
+   - _You can find the plugin ID in the `plugin.json` file inside your plugin directory. For example, if your account slug is `acmecorp`, you need to prefix the plugin ID with `acmecorp-`._
+3. Create a Grafana Cloud API key with the `PluginPublisher` role.
+4. Keep a record of this API key as it will be required for signing a plugin
+
+## Signing a plugin
+
+### Using Github actions release workflow
+
+If the plugin is using the github actions supplied with `@grafana/create-plugin` signing a plugin is included out of the box. The [release workflow](./.github/workflows/release.yml) can prepare everything to make submitting your plugin to Grafana as easy as possible. Before being able to sign the plugin however a secret needs adding to the Github repository.
+
+1. Please navigate to "settings > secrets > actions" within your repo to create secrets.
+2. Click "New repository secret"
+3. Name the secret "GRAFANA_API_KEY"
+4. Paste your Grafana Cloud API key in the Secret field
+5. Click "Add secret"
+
+#### Push a version tag
+
+To trigger the workflow we need to push a version tag to github. This can be achieved with the following steps:
+
+1. Run `npm version <major|minor|patch>`
+2. Run `git push origin main --follow-tags`
+
+## Learn more
+
+Below you can find source code for existing app plugins and other related documentation.
+
+- [Basic data source plugin example](https://github.com/grafana/grafana-plugin-examples/tree/master/examples/datasource-basic#readme)
+- [`plugin.json` documentation](https://grafana.com/developers/plugin-tools/reference/plugin-json)
+- [How to sign a plugin?](https://grafana.com/developers/plugin-tools/publish-a-plugin/sign-a-plugin)
