@@ -172,14 +172,15 @@ func StreamsQuery(d *CdsClient, sdsId string, token string, query string) (*data
 		return nil, err
 	}
 
-	var streams []sds.SdsStream
-
-	err = json.Unmarshal(body, &streams)
+	var streamsResponse map[string][]sds.SdsStream
+	err = json.Unmarshal(body, &streamsResponse)
 	if err != nil {
 		log.DefaultLogger.Warn("Error parsing json", err.Error())
 		log.DefaultLogger.Warn(fmt.Sprint(string(body)))
 		return nil, err
 	}
+
+	streams := streamsResponse["items"]
 
 	// create a dataframe
 	frame := data.NewFrame("response")
@@ -237,40 +238,43 @@ func StreamsDataQuery(d *CdsClient, sdsId string, token string, id string, start
 	log.DefaultLogger.Info(fmt.Sprint(sdsType))
 
 	// get data
-	path = (basePath + "/streams/" + url.QueryEscape(id) + "/Data?startIndex=" + url.QueryEscape(startIndex) + "&endIndex=" + url.QueryEscape(endIndex))
+	path = (basePath + "/streams/" + url.QueryEscape(id) + "/Data/Window?startIndex=" + url.QueryEscape(startIndex) + "&endIndex=" + url.QueryEscape(endIndex))
 	body, err = SdsRequest(d, token, path, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var sdsData []map[string]interface{}
-	err = json.Unmarshal(body, &sdsData)
+	var sdsDataResponse map[string][]map[string]any
+	err = json.Unmarshal(body, &sdsDataResponse)
 	if err != nil {
 		log.DefaultLogger.Warn("Error parsing json", err.Error())
 		log.DefaultLogger.Warn(fmt.Sprint(string(body)))
 		return nil, err
 	}
-
+	sdsData := sdsDataResponse["items"]
+	//log.DefaultLogger.Info(fmt.Sprint(sdsData))
 	return createDataFrameFromSdsData(stream.Name, sdsType, sdsData)
 }
 
-func createDataFrameFromSdsData(dataFrameName string, sdsType sds.SdsType, sdsData []map[string]interface{}) (*data.Frame, error) {
+func createDataFrameFromSdsData(dataFrameName string, sdsType sds.SdsType, sdsData []map[string]any) (*data.Frame, error) {
 	// create a dataframe
 	frame := data.NewFrame(dataFrameName)
 
 	// create columns in dataframe
-	for i := 0; i < len(sdsType.Properties); i++ {
+	for i := range sdsType.Properties {
 		typeCodeString := sdsType.Properties[i].SdsType.SdsTypeCode
 		frame.Fields = append(frame.Fields,
 			data.NewField(sdsType.Properties[i].Id, nil, createSdsValueList(typeCodeString)))
 	}
 
 	// add data to rows
-	for i := 0; i < len(sdsData); i++ {
-		row := make([]interface{}, len(sdsType.Properties))
-		for j := 0; j < len(sdsType.Properties); j++ {
-			row[j] = convertSdsValue(sdsType.Properties[j].SdsType.SdsTypeCode, sdsData[i][string(sdsType.Properties[j].Id)])
+	for i := range sdsData {
+		row := make([]any, len(sdsType.Properties))
+		for j := range sdsType.Properties {
+			// ToLower is necessary as v2 api responses are serialized to lowercase, and do not preserve casing in type property definition
+			row[j] = convertSdsValue(sdsType.Properties[j].SdsType.SdsTypeCode, sdsData[i][strings.ToLower(string(sdsType.Properties[j].Id))])
 		}
+		//log.DefaultLogger.Info(fmt.Sprint(row))
 		frame.AppendRow(row...)
 	}
 
@@ -324,7 +328,7 @@ func createSdsValueList(sdsTypeCode sds.SdsTypeCode) interface{} {
 	}
 }
 
-func convertSdsValue(sdsTypeCode sds.SdsTypeCode, value interface{}) interface{} {
+func convertSdsValue(sdsTypeCode sds.SdsTypeCode, value any) any {
 
 	switch t := sdsTypeCode; t {
 	case "DateTime":
