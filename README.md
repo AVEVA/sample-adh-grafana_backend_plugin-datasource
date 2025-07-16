@@ -6,14 +6,13 @@
 
 This sample demonstrates how to build a [Grafana](https://grafana.com/) data source backend plugin that runs queries against the Sequential Data Store (SDS) of CONNECT data services or Edge Data Store. The sample performs normal "Get Values" calls against a specified stream in SDS, using the time range of the Grafana dashboard. For more information about backend plugins, refer to the documentation on [Backend plugins](https://grafana.com/docs/grafana/latest/developers/plugins/backend/).
 
-## Requirements
-
-- [Grafana 11.5.3+](https://grafana.com/grafana/download)
+## Prerequisites
 - Web Browser with JavaScript enabled
 - [NodeJS](https://nodejs.org/en/)
 - [Go](https://go.dev/)
 - [Mage](https://magefile.org/)
 - [Git](https://git-scm.com/download/win)
+- [Grafana 11.5.3+](https://grafana.com/grafana/download) (if running in Grafana server)
 - Docker Desktop (if running with Docker) [Windows](https://docs.docker.com/desktop/setup/install/windows-install/) [Mac](https://docs.docker.com/desktop/setup/install/mac-install/) [Linux](https://docs.docker.com/desktop/setup/install/linux/)
 - If using CONNECT data services and not using OAuth passthrough, register a Client Credentials Client in CONNECT data services; a client secret will need to be provided to the sample plugin configuration
 - If using Edge Data Store, the browser must be running local to a running copy of Edge Data Store
