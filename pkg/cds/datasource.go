@@ -158,9 +158,6 @@ func (d *CdsDataSource) query(_ context.Context, pCtx backend.PluginContext, que
 
 	// add the frames to the response.
 	response.Frames = append(response.Frames, frame)
-
-	log.DefaultLogger.Info("We made it")
-
 	return response, err
 }
 
