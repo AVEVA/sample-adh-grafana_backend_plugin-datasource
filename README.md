@@ -6,6 +6,7 @@
 
 This sample demonstrates how to build a [Grafana](https://grafana.com/) data source backend plugin that runs queries against the Sequential Data Store (SDS) of CONNECT data services or Edge Data Store. The sample performs normal "Get Values" calls against a specified stream in SDS, using the time range of the Grafana dashboard. For more information about backend plugins, refer to the documentation on [Backend plugins](https://grafana.com/docs/grafana/latest/developers/plugins/backend/).
 
+![SDS stream data in Grafana](src/img/DataQuery.png)
 ## Prerequisites
 - Web Browser with JavaScript enabled
 - [NodeJS](https://nodejs.org/en/)
@@ -72,6 +73,12 @@ use_pkce = true
 | api_url             | The well-known user information URL of CONNECT data services (may depend on region).                                                                                                                                                                                                                                                                                  |
 | role_attribute_path | Defines how roles are mapped between AVEVA Data Hub and Grafana.                                                                                                                                                                                                                                                                                               |
 | use_pkce            | Enables and forces Grafana to use PKCE.                                                                                                                                                                                                                                                                                                                        |
+
+## Use the sample plugin to configure a data source
+- In Grafana, navigate to Connections > Data Sources
+- Find and click the CONNECTDataServices data source and enter the required information for either CONNECT data services or Edge Data Store
+![CONNECT data services configuration sample](src/img/ADHConfig.png)
+![EDS configuration sample](src/img/EDSConfig.png)
 
 ## Using Community Data
 
