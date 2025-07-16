@@ -15,4 +15,3 @@ else
     echo 'ERROR: Unsupported base image'
     exit 1
 fi
-
