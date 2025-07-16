@@ -18,7 +18,7 @@ This sample demonstrates how to build a [Grafana](https://grafana.com/) data sou
 - If using CONNECT data services and not using OAuth passthrough, register a Client Credentials Client in CONNECT data services; a client secret will need to be provided to the sample plugin configuration
 - If using Edge Data Store, the browser must be running local to a running copy of Edge Data Store
 
-## Getting started
+## Running the sample in Grafana Server
 
 1. Copy this folder to your Grafana server's plugins directory, like `.../grafana/data/plugins`
 1. (Optional) If using other plugins, rename the folder to `aveva-data-hub-sample`
@@ -35,7 +35,7 @@ This sample demonstrates how to build a [Grafana](https://grafana.com/) data sou
 1. Open a new or existing Grafana dashboard, and choose the Sequential Data Store Sample as the data source
 1. Enter your Namespace (if querying ADH) and Stream, and data will populate into the dashboard from the stream for the dashboard's time range
 
-## Running the Sample with Docker
+## Running the sample with Docker
 
 1. Open a command prompt inside this folder
 1. Build the container using `docker build -t grafana-adh .`  
@@ -89,10 +89,10 @@ use_pkce = true
 
 ## Running the Automated Tests on Backend Components
 
-1. Open a command prompt inside the pkg/cds folder
+1. Open a command prompt inside the `pkg/cds` folder
 1. Install dependencies, using `go mod tidy`
 1. Run the tests, using `go test`
 
 ---
   
-For the main samples page [ReadMe](https://github.com/AVEVA)
+For the main AVEVA samples page [ReadMe](https://github.com/AVEVA)
