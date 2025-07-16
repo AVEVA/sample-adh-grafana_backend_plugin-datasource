@@ -38,9 +38,10 @@ This sample demonstrates how to build a [Grafana](https://grafana.com/) data sou
 ## Running the sample with Docker
 
 1. Open a command prompt inside this folder
-1. Build the container using `docker build -t grafana-adh .`  
+1. Build/run the frontend in development mode `npm run dev`
+   _Note: Using this command should automatically reload any front end changes made to the code while the grafana container is running_
+1. Build/run the backend using `npm run server`
    _Note: The dockerfile being built contains an ENV statement that creates an [environment variable](https://grafana.com/docs/grafana/latest/administration/configuration/#configure-with-environment-variables) that overrides an option in the grafana config. In this case, the `allow_loading_unsigned_plugins` option is being overridden to allow the [unsigned plugin](https://grafana.com/docs/grafana/latest/administration/configuration/#allow_loading_unsigned_plugins) in this sample to be used._
-1. Run the container using `docker run -d --name=grafana -p 3000:3000 grafana-adh`
 1. Navigate to localhost:3000 to configure data sources and view data
 
 ## Using ADH OAuth login to Grafana
@@ -73,12 +74,6 @@ use_pkce = true
 | api_url             | The well-known user information URL of CONNECT data services (may depend on region).                                                                                                                                                                                                                                                                                  |
 | role_attribute_path | Defines how roles are mapped between AVEVA Data Hub and Grafana.                                                                                                                                                                                                                                                                                               |
 | use_pkce            | Enables and forces Grafana to use PKCE.                                                                                                                                                                                                                                                                                                                        |
-
-## Use the sample plugin to configure a data source
-- In Grafana, navigate to Connections > Data Sources
-- Find and click the CONNECTDataServices data source and enter the required information for either CONNECT data services or Edge Data Store
-![CONNECT data services configuration sample](src/img/ADHConfig.png)
-![EDS configuration sample](src/img/EDSConfig.png)
 
 ## Using Community Data
 
