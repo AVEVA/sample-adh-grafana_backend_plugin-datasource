@@ -52,7 +52,7 @@ type CheckHealthResponseBody struct {
 }
 
 // Creates a new datasource instance.
-func NewCdsDataSource(dis backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
+func NewCdsDataSource(ctx context.Context, dis backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	log.DefaultLogger.Error("NEW DATA SOURCE CALLED")
 	settings, err := models.LoadPluginSettings(dis)
 	if err != nil {
