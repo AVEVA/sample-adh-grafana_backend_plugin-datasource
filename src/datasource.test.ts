@@ -1,7 +1,6 @@
 import { DataQueryRequest, DataSourceInstanceSettings, FieldType, MutableDataFrame } from '@grafana/data';
 import { SdsDataSourceOptions, SdsDataSourceType, SdsQuery } from 'types';
 import { DataSource } from 'datasource';
-import { BackendSrvRequest, FetchResponse } from '@grafana/runtime';
 import { Observable } from 'rxjs';
 
 jest.mock('@grafana/runtime', () => {
@@ -48,28 +47,10 @@ describe('DataSource', () => {
     },
     readOnly: false,
   };
-  const backendSrv = {
-    fetch(options: BackendSrvRequest): Observable<FetchResponse<unknown>> {
-      const edsResponse = {
-        data: [
-          {
-            TimeStamp: '2020-01-01',
-            Boolean: true,
-            Number: 1,
-            String: 'A',
-          },
-        ],
-      } as FetchResponse;
-
-      return new Observable((subscriber) => {
-        subscriber.next(edsResponse);
-      });
-    },
-  };
 
   describe('constructor', () => {
     it('should use passed in data source information', () => {
-      const datasource = new DataSource(adhSettings, backendSrv as any);
+      const datasource = new DataSource(adhSettings);
       expect(datasource.type).toEqual(SdsDataSourceType.ADH);
       expect(datasource.edsPort).toEqual(edsPort);
     });
@@ -101,7 +82,7 @@ describe('DataSource', () => {
         ],
       } as unknown as DataQueryRequest<SdsQuery>;
 
-      const datasource = new DataSource(adhSettings, backendSrv as any);
+      const datasource = new DataSource(adhSettings);
 
       const results = datasource.queryEDS(options);
 
@@ -147,7 +128,7 @@ describe('DataSource', () => {
 
   describe('getStreams', () => {
     it('should query for streams', (done) => {
-      const datasource = new DataSource(adhSettings, backendSrv as any);
+      const datasource = new DataSource(adhSettings);
 
       datasource.query = jest.fn(() => {
         return new Observable((subscriber) => {

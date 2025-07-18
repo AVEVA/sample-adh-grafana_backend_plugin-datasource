@@ -1,4 +1,4 @@
-package datahub
+package cds
 
 import (
 	"encoding/json"
@@ -9,13 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aveva/connect-data-services/pkg/cds/community"
+	"github.com/aveva/connect-data-services/pkg/cds/sds"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"github.com/osisoft/sample-adh-grafana_backend_plugin-datasource/pkg/datahub/community"
-	"github.com/osisoft/sample-adh-grafana_backend_plugin-datasource/pkg/datahub/sds"
 )
 
-type DataHubClient struct {
+type CdsClient struct {
 	resource        string
 	apiVersion      string
 	tenantId        string
@@ -26,8 +26,8 @@ type DataHubClient struct {
 	client          *http.Client
 }
 
-func NewDataHubClient(resource string, apiVersion string, tenantId string, clientId string, clientSecret string) DataHubClient {
-	return DataHubClient{
+func NewCdsClient(resource string, apiVersion string, tenantId string, clientId string, clientSecret string) CdsClient {
+	return CdsClient{
 		resource:     resource,
 		apiVersion:   apiVersion,
 		tenantId:     tenantId,
@@ -37,7 +37,7 @@ func NewDataHubClient(resource string, apiVersion string, tenantId string, clien
 	}
 }
 
-func GetClientToken(d *DataHubClient) (string, error) {
+func GetClientToken(d *CdsClient) (string, error) {
 	if (d.tokenExpiration - time.Now().Unix()) > (5 * 60) {
 		return ("Bearer " + d.token), nil
 	}
@@ -115,7 +115,7 @@ func GetClientToken(d *DataHubClient) (string, error) {
 	return ("Bearer " + d.token), nil
 }
 
-func SdsRequest(d *DataHubClient, token string, path string, headers map[string]string) ([]byte, error) {
+func SdsRequest(d *CdsClient, token string, path string, headers map[string]string) ([]byte, error) {
 	log.DefaultLogger.Debug("Making query to", path)
 
 	// request data or collection items
@@ -153,7 +153,7 @@ func SdsRequest(d *DataHubClient, token string, path string, headers map[string]
 	return body, nil
 }
 
-func StreamsQuery(d *DataHubClient, namespaceId string, token string, query string) (*data.Frame, error) {
+func StreamsQuery(d *CdsClient, namespaceId string, token string, query string) (*data.Frame, error) {
 	basePath := d.resource + "/api/" + d.apiVersion + "/tenants/" + url.QueryEscape(d.tenantId) + "/namespaces/" + url.QueryEscape(namespaceId)
 	path := (basePath + "/streams?query=" + url.QueryEscape(query))
 
@@ -191,7 +191,7 @@ func StreamsQuery(d *DataHubClient, namespaceId string, token string, query stri
 	return frame, nil
 }
 
-func CommunityStreamsQuery(d *DataHubClient, communityId string, token string, query string) (*data.Frame, error) {
+func CommunityStreamsQuery(d *CdsClient, communityId string, token string, query string) (*data.Frame, error) {
 	basePath := d.resource + "/api/" + d.apiVersion + "/search/communities/" + url.QueryEscape(communityId)
 
 	path := (basePath + "/streams?query=" + url.QueryEscape(query))
@@ -232,7 +232,7 @@ func CommunityStreamsQuery(d *DataHubClient, communityId string, token string, q
 	return frame, nil
 }
 
-func StreamsDataQuery(d *DataHubClient, namespaceId string, token string, id string, startIndex string, endIndex string) (*data.Frame, error) {
+func StreamsDataQuery(d *CdsClient, namespaceId string, token string, id string, startIndex string, endIndex string) (*data.Frame, error) {
 	basePath := d.resource + "/api/" + d.apiVersion + "/tenants/" + url.QueryEscape(d.tenantId) + "/namespaces/" + url.QueryEscape(namespaceId)
 
 	// get type Id
@@ -285,7 +285,7 @@ func StreamsDataQuery(d *DataHubClient, namespaceId string, token string, id str
 	return createDataFrameFromSdsData(stream.Name, sdsType, sdsData)
 }
 
-func CommunityStreamsDataQuery(d *DataHubClient, communityId string, token string, self string, startIndex string, endIndex string) (*data.Frame, error) {
+func CommunityStreamsDataQuery(d *CdsClient, communityId string, token string, self string, startIndex string, endIndex string) (*data.Frame, error) {
 
 	// make a community header
 	communityHeader := map[string]string{

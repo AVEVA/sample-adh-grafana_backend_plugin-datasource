@@ -1,4 +1,4 @@
-package datahub
+package cds
 
 import (
 	"errors"
@@ -68,7 +68,7 @@ func TestStreamsQuery(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			defer test.server.Close()
 
-			client := NewDataHubClient(test.server.URL, apiVersion, tenantId, "", "")
+			client := NewCdsClient(test.server.URL, apiVersion, tenantId, "", "")
 			resp, err := StreamsQuery(&client, namespaceId, "token", "")
 
 			if !reflect.DeepEqual(resp, test.response) {
@@ -200,7 +200,7 @@ func TestStreamsDataQuery(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			defer test.server.Close()
 
-			client := NewDataHubClient(test.server.URL, apiVersion, tenantId, "", "")
+			client := NewCdsClient(test.server.URL, apiVersion, tenantId, "", "")
 			resp, err := StreamsDataQuery(&client, namespaceId, "token", "StreamId1", "", "")
 
 			if !reflect.DeepEqual(resp, test.response) {
@@ -267,7 +267,7 @@ func TestCommunityStreamsQuery(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			defer test.server.Close()
 
-			client := NewDataHubClient(test.server.URL, apiVersion, tenantId, "", "")
+			client := NewCdsClient(test.server.URL, apiVersion, tenantId, "", "")
 			resp, err := CommunityStreamsQuery(&client, namespaceId, "token", "")
 
 			if !reflect.DeepEqual(resp, test.response) {
@@ -400,7 +400,7 @@ func TestCommunityStreamsDataQuery(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			defer test.server.Close()
 
-			client := NewDataHubClient(test.server.URL, apiVersion, tenantId, "", "")
+			client := NewCdsClient(test.server.URL, apiVersion, tenantId, "", "")
 			resp, err := CommunityStreamsDataQuery(&client, communityId, "token", test.server.URL+basePath+"/streams/StreamId1", "", "")
 
 			if !reflect.DeepEqual(resp, test.response) {

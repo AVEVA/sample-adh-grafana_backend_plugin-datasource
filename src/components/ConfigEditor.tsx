@@ -7,13 +7,13 @@ import {
   onUpdateDatasourceJsonDataOptionSelect,
 } from '@grafana/data';
 import { Select, InlineSwitch, InlineField, Input, InlineFieldRow } from '@grafana/ui';
-import { SdsDataSourceOptions, SdsDataSourceType, SdsDataSourceSecureOptions } from './types';
+import { SdsDataSourceOptions, SdsDataSourceType, SdsDataSourceSecureOptions } from '../types';
 
 interface Props extends DataSourcePluginOptionsEditorProps<SdsDataSourceOptions, SdsDataSourceSecureOptions> {}
 
 export const ConfigEditor = (props: Props) => {
   const typeLabels = {
-    [SdsDataSourceType.ADH]: 'AVEVA Data Hub',
+    [SdsDataSourceType.ADH]: 'CONNECT data services',
     [SdsDataSourceType.EDS]: 'Edge Data Store',
   };
 
@@ -79,7 +79,7 @@ export const ConfigEditor = (props: Props) => {
         <div>
           <InlineField
             label="Type"
-            tooltip="The type of SDS source system in use, either AVEVA Data Hub or Edge Data Store"
+            tooltip="The type of SDS source system in use, either CONNECT data services or Edge Data Store"
             labelWidth={20}
           >
             <Select
@@ -107,7 +107,7 @@ export const ConfigEditor = (props: Props) => {
             </InlineField>
           </div>
           <div>
-            <InlineField label="Namespace" tooltip="The Namespace in your for AVEVA Data Hub tenant" labelWidth={20}>
+            <InlineField label="Namespace" tooltip="The Namespace in your for CONNECT data services tenant" labelWidth={20}>
               <Select
                 width={40}
                 placeholder="EDS Namespace"
@@ -120,8 +120,8 @@ export const ConfigEditor = (props: Props) => {
         </div>
       ) : (
         <div className="gf-form-group">
-          <h3 className="page-heading">AVEVA Data Hub</h3>
-          <InlineField label="URL" tooltip="The URL for AVEVA Data Hub" labelWidth={20}>
+          <h3 className="page-heading">CONNECT data services</h3>
+          <InlineField label="URL" tooltip="The URL for CONNECT data services" labelWidth={20}>
             <Input
               required={true}
               placeholder="https://uswe.datahub.connect.aveva.com"
@@ -130,7 +130,7 @@ export const ConfigEditor = (props: Props) => {
               value={jsonData.resource || ''}
             />
           </InlineField>
-          <InlineField label="API Version" tooltip="The version of the ADH API to use" labelWidth={20}>
+          <InlineField label="API Version" tooltip="The version of the CONNECT data services API to use" labelWidth={20}>
             <Input
               required={true}
               placeholder="v1"
@@ -139,7 +139,7 @@ export const ConfigEditor = (props: Props) => {
               value={jsonData.apiVersion || ''}
             />
           </InlineField>
-          <InlineField label="Tenant ID" tooltip="The ID of your AVEVA Data Hub tenant" labelWidth={20}>
+          <InlineField label="Tenant ID" tooltip="The ID of your CONNECT data services tenant" labelWidth={20}>
             <Input
               required={true}
               placeholder="00000000-0000-0000-0000-000000000000"
@@ -161,7 +161,7 @@ export const ConfigEditor = (props: Props) => {
             </InlineField>
           </InlineFieldRow>
           {jsonData.useCommunity && (
-            <InlineField label="Community ID" tooltip="The ID of the AVEVA Data Hub Community" labelWidth={20}>
+            <InlineField label="Community ID" tooltip="The ID of the CONNECT data services Community" labelWidth={20}>
               <Input
                 placeholder="00000000-0000-0000-0000-000000000000"
                 width={40}
@@ -171,10 +171,10 @@ export const ConfigEditor = (props: Props) => {
             </InlineField>
           )}
           {!jsonData.useCommunity && (
-            <InlineField label="Namespace ID" tooltip="The Namespace in your for AVEVA Data Hub tenant" labelWidth={20}>
+            <InlineField label="Namespace ID" tooltip="The Namespace in your for CONNECT data services tenant" labelWidth={20}>
               <Input
                 required={true}
-                placeholder="Enter a Namespace ID..."
+                placeholder="00000000-0000-0000-0000-000000000000"
                 width={40}
                 onChange={onUpdateDatasourceJsonDataOption(props, 'namespaceId')}
                 value={jsonData.namespaceId || ''}
@@ -190,14 +190,14 @@ export const ConfigEditor = (props: Props) => {
             </InlineField>
             {jsonData.oauthPassThru && (
               <div style={warningStyle}>
-                Warning: Requires configuring genenric OAuth with AVEVA Data Hub in your Grafana Server
+                Warning: Requires configuring genenric OAuth with CONNECT data services in your Grafana Server
               </div>
             )}
           </InlineFieldRow>
           {!jsonData.oauthPassThru && (
             <InlineField
               label="Client ID"
-              tooltip="The ID of the Client Credentials client to authenticate against your ADH tenant"
+              tooltip="The ID of the Client Credentials client to authenticate against your Cds tenant"
               labelWidth={20}
             >
               <Input

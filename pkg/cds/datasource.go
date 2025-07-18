@@ -1,4 +1,4 @@
-package datahub
+package cds
 
 import (
 	"context"
@@ -7,27 +7,30 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aveva/connect-data-services/pkg/models"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 )
 
+// Make sure Datasource implements required interfaces. This is important to do
+// since otherwise we will only get a not implemented error response from plugin in
+// runtime. In this example datasource instance implements backend.QueryDataHandler,
+// backend.CheckHealthHandler interfaces. Plugin should not implement all these
+// interfaces- only those which are required for a particular task.
 var (
-	_ backend.QueryDataHandler      = (*DataHubDataSource)(nil)
-	_ backend.CheckHealthHandler    = (*DataHubDataSource)(nil)
-	_ instancemgmt.InstanceDisposer = (*DataHubDataSource)(nil)
+	_ backend.QueryDataHandler      = (*CdsDataSource)(nil)
+	_ backend.CheckHealthHandler    = (*CdsDataSource)(nil)
+	_ instancemgmt.InstanceDisposer = (*CdsDataSource)(nil)
 )
 
-type DataHubDataSource struct {
-	dataHubClient *DataHubClient
-	namespaceId   string
-	communityId   string
-	oauthPassThru bool
-	useCommunity  bool
+type CdsDataSource struct {
+	cdsClient *CdsClient
+	settings  *models.CdsSettings
 }
 
-type DataHubDataSourceOptions struct {
+type CdsDataSourceOptions struct {
 	Resource      string `json:"resource"`
 	ApiVersion    string `json:"apiVersion"`
 	TenantId      string `json:"tenantId"`
@@ -49,50 +52,41 @@ type CheckHealthResponseBody struct {
 }
 
 // Creates a new datasource instance.
-func NewDataHubDataSource(settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-	// Get JSON Data to read datasource settings
-	var options DataHubDataSourceOptions
-	err := json.Unmarshal(settings.JSONData, &options)
+func NewCdsDataSource(ctx context.Context, dis backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
+	log.DefaultLogger.Error("NEW DATA SOURCE CALLED")
+	settings, err := models.LoadPluginSettings(dis)
 	if err != nil {
-		log.DefaultLogger.Warn("error marshalling", "err", err)
 		return nil, err
 	}
 
-	// Read Client Secret from Secure JSON Data
-	var secureData = settings.DecryptedSecureJSONData
-	clientSecret, _ := secureData["clientSecret"]
-
-	client := NewDataHubClient(options.Resource, options.ApiVersion, options.TenantId, options.ClientId, clientSecret)
-	return &DataHubDataSource{
-		dataHubClient: &client,
-		namespaceId:   options.NamespaceId,
-		communityId:   options.CommunityId,
-		oauthPassThru: options.OauthPassThru,
-		useCommunity:  options.UseCommunity,
+	client := NewCdsClient(settings.Resource, settings.ApiVersion, settings.TenantId, settings.ClientId, settings.Secrets.ClientSecret)
+	return &CdsDataSource{
+		cdsClient: &client,
+		settings:  settings,
 	}, nil
 }
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance
 // created. As soon as datasource settings change detected by SDK old datasource instance will
 // be disposed and a new one will be created using the new instance factory function.
-func (d *DataHubDataSource) Dispose() {
+func (d *CdsDataSource) Dispose() {
 	// Clean up datasource instance resources.
 }
 
 // Handles multiple queries and returns multiple responses.
-func (d *DataHubDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+func (d *CdsDataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	log.DefaultLogger.Info("QueryData called", "request", req)
 
 	// retrieve token
 	var token string
-	if d.oauthPassThru {
+	if d.settings.OauthPassThru {
 		token = req.Headers["Authorization"]
 		if len(token) == 0 {
 			return nil, fmt.Errorf("Unable to retrieve token")
 		}
 	} else {
 		var err error
-		token, err = GetClientToken(d.dataHubClient)
+		token, err = GetClientToken(d.cdsClient)
 		if err != nil {
 			log.DefaultLogger.Warn("Unable to retrieve token", err.Error())
 			return nil, err
@@ -119,7 +113,7 @@ func (d *DataHubDataSource) QueryData(ctx context.Context, req *backend.QueryDat
 }
 
 // Handles the individual queries from QueryData.
-func (d *DataHubDataSource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery, token string) (backend.DataResponse, error) {
+func (d *CdsDataSource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery, token string) (backend.DataResponse, error) {
 	log.DefaultLogger.Info("Running query", "query", query)
 	response := backend.DataResponse{}
 
@@ -134,59 +128,55 @@ func (d *DataHubDataSource) query(_ context.Context, pCtx backend.PluginContext,
 	// determine what type of query to use
 	frame := data.NewFrame("response")
 	var err error
-	if d.useCommunity {
+	if d.settings.UseCommunity {
 		if strings.EqualFold(qm.Collection, "streams") && qm.Id != "" {
 			log.DefaultLogger.Debug("Community stream data query")
-			frame, err = CommunityStreamsDataQuery(d.dataHubClient,
-				d.communityId,
+			frame, err = CommunityStreamsDataQuery(d.cdsClient,
+				d.settings.CommunityId,
 				token,
 				qm.Id,
 				query.TimeRange.From.Format(time.RFC3339),
 				query.TimeRange.To.Format(time.RFC3339))
 		} else if strings.EqualFold(qm.Collection, "streams") {
 			log.DefaultLogger.Debug("Community stream query")
-			frame, err = CommunityStreamsQuery(d.dataHubClient, d.communityId, token, qm.Query)
+			frame, err = CommunityStreamsQuery(d.cdsClient, d.settings.CommunityId, token, qm.Query)
 		}
 	} else {
 		if strings.EqualFold(qm.Collection, "streams") && qm.Id != "" {
 			log.DefaultLogger.Debug("Stream data query")
-			frame, err = StreamsDataQuery(d.dataHubClient,
-				d.namespaceId,
+			frame, err = StreamsDataQuery(d.cdsClient,
+				d.settings.NamespaceId,
 				token,
 				qm.Id,
 				query.TimeRange.From.Format(time.RFC3339),
 				query.TimeRange.To.Format(time.RFC3339))
 		} else if strings.EqualFold(qm.Collection, "streams") {
 			log.DefaultLogger.Debug("Stream query")
-			frame, err = StreamsQuery(d.dataHubClient, d.namespaceId, token, qm.Query)
+			frame, err = StreamsQuery(d.cdsClient, d.settings.NamespaceId, token, qm.Query)
 		}
 	}
 
 	// add the frames to the response.
 	response.Frames = append(response.Frames, frame)
-
-	log.DefaultLogger.Info("We made it")
-
 	return response, err
 }
 
 // Handles health checks sent from Grafana to the plugin.
-func (d *DataHubDataSource) CheckHealth(_ context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	log.DefaultLogger.Info("CheckHealth called", "request", req)
-
+func (d *CdsDataSource) CheckHealth(_ context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+	log.DefaultLogger.Error("CHECK HEALTH CALLED")
 	var status = backend.HealthStatusOk
 	var message = "Data source is working"
 
 	// Retrieve token
 	var token string
-	if d.oauthPassThru {
+	if d.settings.OauthPassThru {
 		return &backend.CheckHealthResult{
 			Status:  status,
 			Message: message,
 		}, nil
 	} else {
 		var err error
-		token, err = GetClientToken(d.dataHubClient)
+		token, err = GetClientToken(d.cdsClient)
 		if err != nil {
 			log.DefaultLogger.Warn("Error unable to get token health check", err.Error())
 			return &backend.CheckHealthResult{
@@ -198,13 +188,13 @@ func (d *DataHubDataSource) CheckHealth(_ context.Context, req *backend.CheckHea
 
 	// Make a request to test the token
 	var path string
-	if d.useCommunity {
-		path = d.dataHubClient.resource + "/api/" + d.dataHubClient.apiVersion + "/tenants/" + d.dataHubClient.tenantId + "/communities/" + d.communityId
+	if d.settings.UseCommunity {
+		path = d.cdsClient.resource + "/api/" + d.cdsClient.apiVersion + "/tenants/" + d.cdsClient.tenantId + "/communities/" + d.settings.CommunityId
 	} else {
-		path = d.dataHubClient.resource + "/api/" + d.dataHubClient.apiVersion + "/tenants/" + d.dataHubClient.tenantId + "/namespaces/" + d.namespaceId
+		path = d.cdsClient.resource + "/api/" + d.cdsClient.apiVersion + "/tenants/" + d.cdsClient.tenantId + "/namespaces/" + d.settings.NamespaceId
 	}
 
-	body, err := SdsRequest(d.dataHubClient, token, path, nil)
+	body, err := SdsRequest(d.cdsClient, token, path, nil)
 	if err != nil {
 		log.DefaultLogger.Warn("Error test request health check", err.Error())
 		status = backend.HealthStatusError
